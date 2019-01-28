@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+import datetime
 import os
 import tempfile
 
 import pytest
 
-from biocommons.seqrepo.cli import (init, load)
+import biocommons.seqrepo.cli as srcli
 
 
 @pytest.fixture
@@ -21,21 +22,31 @@ def opts():
     opts.root_directory = os.path.join(tempfile.mkdtemp(prefix="seqrepo_pytest_"), "seqrepo")
     opts.fasta_files = [os.path.join(test_data_dir, "sequences.fa.gz")]
     opts.namespace = "test"
-    opts.instance_name = "test"
+    opts.instance_name = str(datetime.date.today())
     opts.verbose = 0
+
     return opts
 
 
-def test_00_init(opts):
-    init(opts)
+def test_init(opts):
+    srcli.init(opts)
     assert os.path.exists(opts.root_directory)
 
     with pytest.raises(IOError) as excinfo:
-        init(opts)
+        srcli.init(opts)
 
     seqrepo_dir = os.path.join(opts.root_directory, opts.instance_name)
     assert str(excinfo.value) == "{seqrepo_dir} exists and is not empty".format(seqrepo_dir=seqrepo_dir)
 
 
-def test_20_load(opts):
-    load(opts)
+def test_load(opts):
+    initial_namespace = opts.namespace
+    with pytest.raises(RuntimeError) as excinfo:
+        opts.namespace = "-"
+        srcli.load(opts)
+    assert str(excinfo.value) == "namespace == '-' is no longer supported"
+    opts.namespace = initial_namespace
+
+    srcli.load(opts)
+    srcli.list_local_instances(opts)
+    srcli.show_status(opts)
