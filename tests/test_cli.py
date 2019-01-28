@@ -22,16 +22,17 @@ def opts():
     opts.root_directory = os.path.join(tempfile.mkdtemp(prefix="seqrepo_pytest_"), "seqrepo")
     opts.fasta_files = [os.path.join(test_data_dir, "sequences.fa.gz")]
     opts.namespace = "test"
-    opts.instance_name = str(datetime.date.today())
+    opts.instance_name = "test"
     opts.verbose = 0
 
+    opts.remote_host = "localhost"
     return opts
 
 
 def test_init(opts):
     srcli.init(opts)
     assert os.path.exists(opts.root_directory)
-
+    
     with pytest.raises(IOError) as excinfo:
         srcli.init(opts)
 
@@ -41,12 +42,25 @@ def test_init(opts):
 
 def test_load(opts):
     initial_namespace = opts.namespace
-    with pytest.raises(RuntimeError) as excinfo:
+    with pytest.raises(RuntimeError):
         opts.namespace = "-"
         srcli.load(opts)
-    assert str(excinfo.value) == "namespace == '-' is no longer supported"
     opts.namespace = initial_namespace
 
+    opts.instance_name = str(datetime.date.today())
+    srcli.load(opts)
+    srcli.show_status(opts)  # TODO(@ispashayev): show_status not counting three sequences
+
+    # print("=========")
+    # print([fname for _, _, fnames in os.walk(os.path.join(opts.root_directory, opts.instance_name)) for fname in fnames])
+    # print("STOP")
+    # assert False
+
+
+def test_list_instances(mocker, opts):
     srcli.load(opts)
     srcli.list_local_instances(opts)
-    srcli.show_status(opts)
+
+    mocker.patch("biocommons.seqrepo.cli._get_remote_instances", new=srcli._get_local_instances)
+    assert srcli._get_remote_instances(opts) == srcli._get_local_instances(opts)
+    srcli.list_remote_instances(opts)
