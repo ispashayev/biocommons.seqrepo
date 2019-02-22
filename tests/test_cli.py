@@ -32,7 +32,7 @@ def opts():
 def test_init(opts):
     srcli.init(opts)
     assert os.path.exists(opts.root_directory)
-    
+
     with pytest.raises(IOError) as excinfo:
         srcli.init(opts)
 
